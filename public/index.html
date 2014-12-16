@@ -1,0 +1,243 @@
+<html>
+<head>
+<script src ='http://code.jquery.com/jquery-2.1.1.min.js'></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js"></script>
+<script>
+	$(document).ready(function(){
+		load()
+	})
+</script>
+<link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+
+</body>
+<script>
+
+var view = {}
+var ctrl = {}
+ctrl.chats = []
+view.button = {}
+ctrl.compiledChatTemplate = _.template("<strong><%= user %></strong>(<%= time %>):<%= message %><br>");
+function load()
+{
+	title = $("<h1>").text("Chattitude Web Interface")
+	
+	view.button.signin = $("<button>").attr('type', 'button').text('Sign-In').addClass('btn btn-lg btn-primary glyphicon glyphicon-user')
+	view.button.signup = $("<button>").attr('type', 'button').text('Sign-Up').addClass('btn btn-lg btn-success glyphicon glyphicon-pencil')
+	view.button.signout = $("<button>").attr('type', 'button').text('Sign-Out').addClass('btn btn-lg btn-danger glyphicon glyphicon-remove')
+	view.container = {}
+	view.container.main = $("<div>").addClass("container-fluid")
+	$(view.container.main).css("overflow-y", "scroll")
+	assets = [view.button.signup, view.button.signin, title, view.container.main]
+	$.each(assets, function(i, asset){
+		$('body').append(asset)
+	})
+	$('.btn', "body").css("margin-left", "0px").css("margin-right", "4px").css("float", "right")
+	$(title).css("margin-left", "4px")
+	$(view.container.main).css("border", "1px solid black").css("margin-left","5px").css("margin-right","5px").css("height", "70%")
+
+	view.button.signup.click(signup)
+	view.button.signin.click(signin)
+	token = localStorage.getItem("apiToken")
+	if(token)
+		signin(token)
+}
+
+
+
+function signup()
+{
+	lol = $("<center>")
+	signupForm = $('<form>')
+	view.signupForm =signupForm
+	uLabel = $('<label>').text('Username:').attr('for', 'signup_username')
+	uInput = $('<input>').attr('type', "text").attr('id', 'signup_username')
+	pLabel = $('<label>').text('Password:').attr('for', 'signup_password')
+	$(pLabel).css("margin-left", "3px")
+	pInput = $('<input>').attr('type', "password").attr('id', 'signup_password')
+	button = $("<button>").attr('type', 'button').text('Submit!').addClass('btn btn-lg btn-success glyphicon glyphicon-pencil')
+	$(button).css("margin-left", "3px")
+	assets = [$("<h1>").text('Sign Up'),$('<br>'),uLabel, uInput, pLabel, pInput, button]
+	button.click(function(e){
+		e.preventDefault()
+		fields = {}
+		$("input",view.signupForm).each(function(i,v){
+				v = $(v)
+				k = $(v).attr('id')
+				k= k.substring(k.indexOf("_")+1, k.length)
+				fields[k] = v.val()
+		})
+		$.ajax({
+		  type: 'POST',
+		  url: 'http://chat.api.mks.io/signup',
+		  data:fields
+		}).success(function() {
+		  console.log("Account created.")
+		})		
+
+	})
+	$.each(assets, function(i, asset){
+		$(signupForm).append(asset)
+	})
+	$(lol).css('margin-top', '10px')
+
+	$(lol).append(signupForm)
+	$(view.container.main).empty()
+	$(view.container.main).append(lol)
+
+
+}
+
+function signin(apiToken)
+{
+	if(!(apiToken.constructor == String))
+	{
+
+		lol = $("<center>")
+		signinForm = $('<form>')
+		view.signinForm =signinForm
+		uLabel = $('<label>').text('Username:').attr('for', 'signin_username')
+		uInput = $('<input>').attr('type', "text").attr('id', 'signin_username')
+		pLabel = $('<label>').text('Password:').attr('for', 'signin_password')
+		$(pLabel).css("margin-left", "3px")
+		pInput = $('<input>').attr('type', "password").attr('id', 'signin_password')
+		button = $("<button>").attr('type', 'button').text('Submit!').addClass('btn btn-lg btn-success glyphicon glyphicon-pencil')
+		$(button).css("margin-left", "3px")
+		assets = [$("<h1>").text('Sign In'),$('<br>'),uLabel, uInput, pLabel, pInput, button]
+		button.click(function(e){
+			e.preventDefault()
+			fields = {}
+			$("input",view.signinForm).each(function(i,v){
+					v = $(v)
+					k = $(v).attr('id')
+					k= k.substring(k.indexOf("_")+1, k.length)
+					fields[k] = v.val()
+			})
+			$.ajax({
+			  type: 'POST',
+			  url: 'http://chat.api.mks.io/signin',
+			  data:fields
+			}).success(function(response) {
+			  console.log("Signed In", response["apiToken"])
+			  ctrl.apiToken = response["apiToken"]
+			  localStorage.setItem("apiToken", ctrl.apiToken)
+			  chatInit()
+			})		
+
+		})
+	}
+	else
+	{
+		console.log(apiToken)
+		ctrl.apiToken = apiToken
+		chats = localStorage.getItem("chats")
+		$.each(chats, function(i, v){
+	  			console.log("appending chat message "+i)
+	  			chatmessage = ctrl.compiledChatTemplate({user:v.user, time:v.time, message:v.message})
+	  			ctrl.chats.push(chatmessage)
+	  			console.log(chatmessage)
+	  			$(view.container.main).append(chatmessage)
+	  })
+
+	  	localStorage.setItem("apiToken", apiToken)
+	  	chatInit()
+	}
+	$.each(assets, function(i, asset){
+		$(signinForm).append(asset)
+	})
+	$(lol).css('margin-top', '10px')
+
+	$(lol).append(signinForm)
+	$(view.container.main).empty()
+	$(view.container.main).append(lol)
+
+}
+
+function chatInit()
+{
+	$(view.container.main).empty()
+	$(view.button.signup).remove()
+	$(view.button.signin).remove()
+	$("h1", "body").before(view.button.signout)
+	$('.btn', "body").css("margin-left", "0px").css("margin-right", "4px").css("float", "right")
+	chatForm = $('<form>')
+	view.chatForm =chatForm
+	cLabel = $('<label>').text('Chat:').attr('for', 'c_message')
+	$(cLabel).css("margin-left", "3px")
+	cInput = $('<input>').attr('type', "text").attr('id', 'c_message').width("90%")
+	$(cInput).css("margin-left", "3px")
+	button = $("<button>").attr('type', 'button').text('Send!').addClass('btn btn-lg btn-success glyphicon glyphicon-pencil')
+	$(button).css("margin-left", "3px")
+	$(chatForm).css("margin-top", "5px")
+	assets = [cLabel, cInput, button]
+	$.each(assets, function(i, asset){
+		$(chatForm).append(asset)
+	})
+	$("body").append(chatForm)
+	$(button).click(function(e){
+		e.preventDefault()
+		console.log("submitting:"+$("input",view.chatForm)[0].value)
+		data = {message:$("input",view.chatForm)[0].value, apiToken:ctrl.apiToken}
+		$.ajax({
+	  type: 'POST',
+	  data:data,
+	  url: 'http://chat.api.mks.io/chats'
+	}).success(function (chats) {
+		console.log("Success!")
+	  	
+		
+		})
+	$($("input", view.chatForm)[0]).val('')
+	})
+
+	setInterval(getChats, 2000);	
+}
+
+function getChats()
+{
+	console.log("Getting Chats.")
+	$.ajax({
+
+	  type: 'GET',
+	  url: 'http://chat.api.mks.io/chats'
+
+	}).success(function (chats) {
+	  	$.each(chats, function(i, v){
+	  		stored = JSON.stringify(v)
+	  		chatmessage = ctrl.compiledChatTemplate({user:v.user, time:v.time, message:v.message})
+	  		console.log()
+	  		if($.inArray(stored) == -1)
+	  		{
+
+	  			console.log("appending chat message "+i)
+	  			ctrl.chats.push(chatmessage)
+	  			console.log(chatmessage)
+	  			$(view.container.main).append(chatmessage)
+  				
+
+	  		}
+	  		else
+	  		{
+	  			console.log("found at: "+$.inArray(chatmessage))
+	  		}
+	  		
+	  		
+
+	  })
+
+	  	view.container.main[0].scrollTop = view.container.main[0].scrollHeight;
+	  	localStorage.setItem("chats", JSON.stringify(ctrl.chats))
+	})
+
+
+}
+
+
+
+
+
+</script>
+</html>
